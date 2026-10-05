@@ -63,7 +63,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--lime);outline-o
 .res-head p{margin:0;color:var(--muted)}
 .results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
 @media (max-width:680px){.results,.gen{grid-template-columns:1fr}.gen canvas:nth-child(2){display:none}}
-.look{display:flex;flex-direction:column;gap:12px;animation:rise .7s ease both}
+.look{display:flex;flex-direction:column;gap:12px;min-width:0;animation:rise .7s ease both}
 .look:nth-child(2){animation-delay:.2s}
 @keyframes rise{from{transform:translateY(12px);opacity:.25}to{transform:none;opacity:1}}
 .photo{aspect-ratio:4/5;width:100%;border-radius:16px;overflow:hidden;background:var(--panel)}
@@ -72,9 +72,12 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--lime);outline-o
 .look .opt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .look h3{margin:0;font-weight:800;font-size:22px;line-height:1.15}
 .look p{margin:0;color:var(--muted);max-width:48ch}
-.look .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.dl{font:inherit;font-weight:700;font-size:14px;border-radius:999px;padding:10px 18px;border:1px solid var(--lime);background:transparent;color:var(--lime);cursor:pointer}
+.look .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:auto;padding-top:6px}
+.look .toast{flex-basis:100%;min-height:1.2em}
+.dl{font:inherit;font-weight:700;font-size:13px;border-radius:999px;padding:9px 15px;white-space:nowrap;border:1px solid var(--lime);background:transparent;color:var(--lime);cursor:pointer}
 .dl:hover:not(:disabled){background:var(--lime);color:var(--lime-ink)}
+.dl.solid{background:var(--lime);color:var(--lime-ink)}
+.dl.solid:hover:not(:disabled){background:transparent;color:var(--lime)}
 .dl:disabled{border-color:var(--line);color:var(--muted);cursor:not-allowed}
 .toast{font-size:12px;color:var(--muted)}
 footer{margin-top:48px;font-size:12px;color:var(--muted)}
@@ -227,22 +230,68 @@ function reveal(p,imgs){
   $("#res-name").textContent=p.n;$("#res-role").textContent=p.r;
   $("#results").innerHTML=p.c.map((c,i)=>`<article class="look">
     <div class="photo">${imgs[i]?`<img src="${imgUrl(p,i)}" alt="${p.n} disfrazado de ${c.t}">`:`<div class="pending">Imagen en preparación</div>`}</div>
-    <div class="opt">Disfraz ${i+1} de 2</div>
+    <div class="opt">Costume ${i+1}/2</div>
     <h3></h3><p></p>
-    <div class="row"><button class="dl" type="button" data-i="${i}" ${imgs[i]?"":"disabled"}>Descargar foto</button><span class="toast" aria-live="polite"></span></div>
+    <div class="row"><button class="dl" type="button" data-i="${i}" data-k="photo" ${imgs[i]?"":"disabled"}>Descargar foto</button><button class="dl solid" type="button" data-i="${i}" data-k="card" ${imgs[i]?"":"disabled"}>Descargar foto con descripciones</button><span class="toast" aria-live="polite"></span></div>
   </article>`).join("");
   document.querySelectorAll(".look").forEach((el,i)=>{el.querySelector("h3").textContent=p.c[i].t;el.querySelector("p").textContent=p.c[i].d;});
   $("#results").onclick=async e=>{
-    const b=e.target.closest(".dl");if(!b||b.disabled)return;const i=+b.dataset.i,toast=b.nextElementSibling;
-    const fname=`halloween-glofy-${p.s}-${slug(p.c[i].t)}.jpg`;
-    if(!window.claude){const a=document.createElement("a");a.href=imgUrl(p,i);a.download=fname;document.body.appendChild(a);a.click();a.remove();toast.textContent="Descarga iniciada.";return;}
-    const dl=downloads||await window.claude?.use?.("downloads").catch(()=>null);
-    if(!dl){toast.textContent="La descarga no está disponible en esta vista. Mantené presionada la foto para guardarla.";return;}
-    try{b.disabled=true;const blob=await (await fetch(imgUrl(p,i))).blob();
-      await dl.save({filename:fname,data:blob});toast.textContent="Foto guardada.";}
-    catch(err){toast.textContent=err&&err.code==="declined"?"":"No se pudo descargar. Probá de nuevo en unos segundos.";}
+    const b=e.target.closest(".dl");if(!b||b.disabled)return;
+    const i=+b.dataset.i,card=b.dataset.k==="card",toast=b.parentElement.querySelector(".toast");
+    const fname=`halloween-glofy-${p.s}-${slug(p.c[i].t)}${card?"-card":""}.jpg`;
+    b.disabled=true;toast.textContent=card?"Preparando la imagen…":"";
+    try{
+      const blob=card?await buildCard(p,i,imgs[i]):await (await fetch(imgUrl(p,i))).blob();
+      toast.textContent=await saveFile(blob,fname);
+    }catch(err){toast.textContent=err&&err.code==="declined"?"":"No se pudo descargar. Probá de nuevo en unos segundos.";}
     finally{b.disabled=false;}
   };
+}
+
+async function saveFile(blob,fname){
+  if(!window.claude){
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);return "Descarga iniciada.";
+  }
+  const dl=downloads||await window.claude?.use?.("downloads").catch(()=>null);
+  if(!dl)return "La descarga no está disponible en esta vista. Mantené presionada la foto para guardarla.";
+  await dl.save({filename:fname,data:blob});return "Foto guardada.";
+}
+
+// LinkedIn-ready 4:5 composition (1440x1800): photo + costume name + description
+function wrapLines(ctx,text,maxW){
+  const words=text.split(" "),lines=[];let line="";
+  for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;}
+  if(line)lines.push(line);return lines;
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+async function buildCard(p,i,img){
+  const W=1440,H=1800,M=170,PW=W-2*M,PH=Math.round(PW*5/4),PY=64;
+  await Promise.all(["900 80px Montserrat","800 64px Montserrat","500 34px Montserrat","500 24px 'JetBrains Mono'"].map(f=>document.fonts.load(f).catch(()=>{})));
+  if(!img)img=await loadImg(imgUrl(p,i));
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const ctx=cv.getContext("2d");
+  ctx.fillStyle="#141617";ctx.fillRect(0,0,W,H);
+  // spider web, top-left
+  const svg=$("#web").outerHTML.replace('class="web"','xmlns="http://www.w3.org/2000/svg" width="600" height="440"').replace('currentColor','#EEF1EA');
+  const webImg=await loadImg("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg));
+  if(webImg){ctx.globalAlpha=.18;ctx.drawImage(webImg,0,0,600,440);ctx.globalAlpha=1;}
+  // photo
+  ctx.save();roundRect(ctx,M,PY,PW,PH,28);ctx.clip();
+  const r=Math.max(PW/img.width,PH/img.height),iw=img.width*r,ih=img.height*r;
+  ctx.drawImage(img,M+(PW-iw)/2,PY+(PH-ih)/2,iw,ih);ctx.restore();
+  // text block
+  let y=PY+PH+70;
+  ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#CCFF00";ctx.font="500 24px 'JetBrains Mono', monospace";
+  if("letterSpacing" in ctx)ctx.letterSpacing="3px";ctx.fillText(`HALLOWEEN COSTUMES LAB · COSTUME ${i+1}/2`,M,y);if("letterSpacing" in ctx)ctx.letterSpacing="0px";
+  const c=p.c[i];let size=64;ctx.font=`800 ${size}px Montserrat, sans-serif`;
+  while(ctx.measureText(c.t).width>PW&&size>40){size-=2;ctx.font=`800 ${size}px Montserrat, sans-serif`;}
+  y+=size+16;ctx.fillStyle="#EEF1EA";ctx.fillText(c.t,M,y);
+  ctx.font="500 34px Montserrat, sans-serif";ctx.fillStyle="#B3BAB1";
+  const lines=wrapLines(ctx,c.d,PW).slice(0,3);
+  y+=16;lines.forEach(l=>{y+=48;ctx.fillText(l,M,y);});
+  return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("toBlob")),"image/jpeg",.92));
 }
 
 $("#out").addEventListener("click",()=>{$("#form").reset();$("#go").disabled=false;$("#err").textContent="";show("login");});
