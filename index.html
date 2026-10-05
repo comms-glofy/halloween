@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Halloween Costumes Lab</title>
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Layout: one dark "lab" world (the brand logo is white + lime, built for dark ground). Centered sign-in card -> twin canvases that "develop" -> two clean photos with caption + download. */
+:root{
+  --bg:#141617; --panel:#1C1F21; --panel-2:#23272A; --ink:#EEF1EA; --muted:#98A097; --line:rgba(238,241,234,.12);
+  --lime:#CCFF00; --lime-ink:#141617; --danger:#FF8A7A;
+  --display:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--display);font-size:15px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-inline:20px;padding-block:24px 64px;position:relative}
+.web{position:absolute;top:0;left:0;width:min(52vw,320px);height:auto;color:var(--ink);opacity:.22;pointer-events:none}
+.top{display:flex;justify-content:flex-end;align-items:center;padding-block:6px 0;position:relative}
+.top img{height:30px;width:auto}
+.hero{position:relative;margin:64px 0 28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--lime)}
+h1{font-weight:900;font-size:clamp(36px,7.4vw,72px);line-height:.95;letter-spacing:-.025em;margin:10px 0 0;text-wrap:balance}
+h1 span{color:var(--lime)}
+.lede{color:var(--muted);max-width:52ch;margin:14px 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;max-width:520px}
+label{display:block;font-weight:700;font-size:13px;margin-bottom:6px}
+.field{display:flex;flex-direction:column;gap:0;margin-bottom:16px}
+input{font:inherit;font-size:16px;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.err{color:var(--danger);font-size:13px;min-height:1.4em;margin:0 0 10px}
+.btn{font:inherit;font-weight:800;font-size:16px;border:0;border-radius:999px;padding:14px 22px;background:var(--lime);color:var(--lime-ink);cursor:pointer;width:100%}
+.btn:disabled{opacity:.45;cursor:progress}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);width:auto;font-size:14px;padding:10px 18px}
+
+/* generation */
+.gen{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.gen canvas{width:100%;height:auto;aspect-ratio:4/5;border-radius:16px;background:#0D0F10;display:block}
+.status{margin-top:20px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:640px}
+.log{font-family:var(--mono);font-size:13px;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;min-height:9.5em}
+.log li{color:var(--muted)}
+.log li.done::before{content:"✓ ";color:var(--lime)}
+.log li.now{color:var(--ink)}
+.log li.now::before{content:"› ";color:var(--lime)}
+.bar{height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--lime)}
+.pct{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+
+/* result */
+.res-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+.res-head h2{font-weight:900;font-size:clamp(26px,4.4vw,40px);line-height:1.05;margin:6px 0 4px;text-wrap:balance}
+.res-head p{margin:0;color:var(--muted)}
+.results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media (max-width:680px){.results,.gen{grid-template-columns:1fr}.gen canvas:nth-child(2){display:none}}
+.look{display:flex;flex-direction:column;gap:12px;animation:rise .7s ease both}
+.look:nth-child(2){animation-delay:.2s}
+@keyframes rise{from{transform:translateY(12px);opacity:.25}to{transform:none;opacity:1}}
+.photo{aspect-ratio:4/5;width:100%;border-radius:16px;overflow:hidden;background:var(--panel)}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo .pending{width:100%;height:100%;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:20px}
+.look .opt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.look h3{margin:0;font-weight:800;font-size:22px;line-height:1.15}
+.look p{margin:0;color:var(--muted);max-width:48ch}
+.look .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dl{font:inherit;font-weight:700;font-size:14px;border-radius:999px;padding:10px 18px;border:1px solid var(--lime);background:transparent;color:var(--lime);cursor:pointer}
+.dl:hover:not(:disabled){background:var(--lime);color:var(--lime-ink)}
+.dl:disabled{border-color:var(--line);color:var(--muted);cursor:not-allowed}
+.toast{font-size:12px;color:var(--muted)}
+footer{margin-top:48px;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.look{animation:none}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <svg class="web" id="web" viewBox="0 0 300 220" aria-hidden="true"></svg>
+  <div class="top"><img src="glofy-logo.png" alt="Glofy"></div>
+
+  <section id="v-login">
+    <div class="hero">
+      <div class="eyebrow">Halloween 2026</div>
+      <h1>Halloween <span>Costumes</span> Lab</h1>
+      <p class="lede">Nuestro laboratorio preparó un disfraz a la medida de lo que hacés en Glofy. Ingresá tus datos para crear tu versión de Halloween.</p>
+    </div>
+    <form class="card" id="form" novalidate>
+      <div class="field">
+        <label for="name">Nombre y apellido</label>
+        <input id="name" name="name" autocomplete="name" placeholder="Por ejemplo, Lucía Scarpeccio" required>
+      </div>
+      <div class="field">
+        <label for="dob">Fecha de nacimiento</label>
+        <input id="dob" name="dob" type="date" min="1940-01-01" max="2012-12-31" required>
+        <div class="hint">La usamos solo para confirmar que sos vos.</div>
+      </div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn" id="go" type="submit">Crear mi disfraz</button>
+    </form>
+  </section>
+
+  <section id="v-gen" hidden>
+    <div class="hero" style="margin-top:40px">
+      <div class="eyebrow" id="gen-eyebrow">En proceso</div>
+      <h1 id="gen-title" style="font-size:clamp(30px,5.6vw,52px)">Creando tus disfraces</h1>
+    </div>
+    <div class="gen"><canvas id="c0" width="480" height="600"></canvas><canvas id="c1" width="480" height="600"></canvas></div>
+    <div class="status">
+      <ul class="log" id="log"></ul>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="pct"><span id="stage">Preparando el laboratorio</span><span id="pct">0%</span></div>
+    </div>
+  </section>
+
+  <section id="v-res" hidden>
+    <div class="res-head" style="margin-top:40px">
+      <div>
+        <div class="eyebrow">Tus disfraces están listos</div>
+        <h2 id="res-name"></h2>
+        <p id="res-role"></p>
+      </div>
+      <button class="btn ghost" id="out" type="button">Salir</button>
+    </div>
+    <div class="results" id="results"></div>
+  </section>
+
+  <footer>Glofy · Halloween Costumes Lab 2026</footer>
+</div>
+
+<script>
+const PEOPLE=[{"n": "Charo Gauna", "r": "Head of Client Success", "s": "charo-gauna", "h": "516590c1bfa32ad95c4ae044", "c": [{"t": "Client Success Fairy", "d": "Convierte cualquier problema de un cliente en un deal con un toque de varita."}, {"t": "Lighthouse Keeper", "d": "La que guía a cada cliente a buen puerto, aunque haya tormenta."}]}, {"n": "Agustín Alturria", "r": "Account Director", "s": "agustin-alturria", "h": "054fbebbaa813ac7c0ce1b7e", "c": [{"t": "The Account Count", "d": "Un conde que no deja escapar ninguna cuenta. Nunca."}, {"t": "Account Grandmaster", "d": "Juega cada cuenta como una partida de ajedrez."}]}, {"n": "Daiana Ulla", "r": "Head of Growth", "s": "daiana-ulla", "h": "61791fa2e459b917cd530058", "c": [{"t": "Growth Enchantress", "d": "Riega una planta mágica que crece en forma de gráfico ascendente."}, {"t": "Growth Astronaut", "d": "Siempre apuntando a la próxima órbita."}]}, {"n": "Paula Molina", "r": "Sales Development Representative", "s": "paula-molina", "h": "3a291ce2e894c4cb6810348c", "c": [{"t": "Leads Keeper", "d": "Guardiana de los leads."}, {"t": "Call Vampire", "d": "Acecha en las sombras cada vez que alguien necesita un talento."}]}, {"n": "Valentina Prieto", "r": "Business Development Manager", "s": "valentina-prieto", "h": "7fa1c6079cc9e928e2cf276d", "c": [{"t": "Opportunity Explorer", "d": "Mapa en mano, encuentra oportunidades donde nadie mira."}, {"t": "Forecast Fortune Teller", "d": "Su bola de cristal ya sabe lo que quiere el cliente."}]}, {"n": "Alejandra Artaza", "r": "Sales Development Representative", "s": "alejandra-artaza", "h": "1eaabf8e2da9182a33ef8235", "c": [{"t": "Lead Magician", "d": "De su galera salen leads."}, {"t": "Lead Fairy", "d": "Con su varita convierte cualquier lead en reunión."}]}, {"n": "Tomás Toledo", "r": "Automation Specialist & SDR", "s": "tomas-toledo", "h": "051edf82921fa112c951d817", "c": [{"t": "Workflow Frankenstein", "d": "Todo flujo de automatización es un Frankenstein que cobra vida y funciona."}, {"t": "Human Automaton", "d": "Mitad persona, mitad engranaje."}]}, {"n": "Valentina Mendieta", "r": "Head of Recruitment", "s": "valentina-mendieta", "h": "bf9c129c663a9d0c56908123", "c": [{"t": "The Perfect Match", "d": "Cada flecha une a un talento con su empresa ideal."}, {"t": "Talent Fairy", "d": "Con su varita encuentra al mejor talento."}]}, {"n": "Cecilia Porta Guardia", "r": "IT Recruiter", "s": "cecilia-porta-guardia", "h": "4b40b1c42791d5feac57c04a", "c": [{"t": "Talent Alchemist", "d": "Mezcla ingredientes precisos: seniority, inglés fluido y fit cultural."}, {"t": "CV Detective", "d": "Lupa en mano, no hay detalle de un CV que se le pase."}]}, {"n": "Lara Sottomano", "r": "IT Recruiter", "s": "lara-sottomano", "h": "9b3a8b74cdcef353c135c909", "c": [{"t": "Python Charmer", "d": "Encanta a cualquier perfil de Python con una sola melodía."}, {"t": "Senior Talent Angler", "d": "Paciencia de pescadora: solo engancha perfiles senior."}]}, {"n": "Paula Giovan", "r": "IT Recruiter", "s": "paula-giovan", "h": "61ba6f8d414149703df392b7", "c": [{"t": "Unicorn Hunter", "d": "Ese candidato que parece imposible de encontrar. Ella lo encuentra."}, {"t": "Boolean Witch", "d": "Sus hechizos se escriben en código."}]}, {"n": "Agustina Lombardi", "r": "People Analyst", "s": "agustina-lombardi", "h": "79fc724b54866bb601000c92", "c": [{"t": "People Astronomer", "d": "Estudia las constelaciones del equipo para entender cómo está cada uno."}, {"t": "People Lab Scientist", "d": "Mide el clima del equipo como quien hace un experimento."}]}, {"n": "Lucía Scarpeccio", "r": "Head of People", "s": "lucia-scarpeccio", "h": "6fed9b773c6ea28efa71e3de", "c": [{"t": "Culture Keeper", "d": "Guardiana de lo que hace que Glofy sea Glofy."}, {"t": "The Onboarding Ghost", "d": "El único fantasma que nunca te ghostea y te acompaña desde el primer día."}]}, {"n": "Cindy Ballar", "r": "Head of Finance & Accounting", "s": "cindy-ballar", "h": "49270e6695820167886e6d62", "c": [{"t": "Budget Dragon", "d": "Guardiana del tesoro. Cada moneda tiene su partida asignada."}, {"t": "Captain Cash Flow", "d": "Navega el flujo de caja con mano firme."}]}, {"n": "Verónica Hemmerling", "r": "Head of HR", "s": "veronica-hemmerling", "h": "2d435055723becd3fca014c3", "c": [{"t": "Handbook Sorceress", "d": "Su libro de hechizos es nuestro manual, y siempre funciona."}, {"t": "Benefits Genie", "d": "Frotá la lámpara y aparece un nuevo beneficio."}]}, {"n": "Germán Hofer", "r": "CTO & Founder", "s": "german-hofer", "h": "93c7f7c815938e793e73800f", "c": [{"t": "Chief Cyborg Officer", "d": "Mitad humano, mitad infraestructura. Siempre online."}, {"t": "Chief Mad Scientist", "d": "El que fundó el laboratorio donde nació todo esto."}]}, {"n": "Gonzalo Rosa", "r": "CEO & Founder", "s": "gonzalo-rosa", "h": "92a94f1ba8acc24bd8bdcd6a", "c": [{"t": "The Nearshore Captain", "d": "Al timón del barco que une el talento de LATAM con el mundo."}, {"t": "Time Zone Traveler", "d": "Vive en tres husos horarios a la vez, como nuestros clientes."}]}, {"n": "Facundo Gómez", "r": "Graphic Designer", "s": "facundo-gomez", "h": "1aebc59d28245fe359772066", "c": [{"t": "Pixel Painter", "d": "Pinta con píxeles y su paleta solo acepta códigos hex."}, {"t": "Design Vampire", "d": "Acecha en las sombras cada vez que alguien estira una tipografía."}]}, {"n": "Iñaki Ibargoyen Garro", "r": "Head of Communications", "s": "inaki-ibargoyen-garro", "h": "30cb41c06bed945a9a58eeaf", "c": [{"t": "Head of Comms Vampire", "d": "No duerme porque siempre hay algo para comunicar."}, {"t": "Head of Comms Ghost", "d": "El único fantasma que nunca te ghostea y está al acecho de qué comunicar."}]}, {"n": "Lucía Dos Santos Botta", "r": "Sales Development Representative", "s": "lucia-dos-santos-botta", "h": "c4a10ad678f362661f42b7d3", "c": [{"t": "Lead Magician", "d": "Con su magia atrae a cualquier lead."}, {"t": "Calendar Witch", "d": "Hechiza calendarios y crea reuniones."}]}, {"n": "Diego Elías", "r": "Head of Business Development", "s": "diego-elias", "h": "6a915c2d56d07f54194b179a", "c": [{"t": "Deal Wolf", "d": "Cuando hay luna llena, sale a cazar oportunidades."}, {"t": "Global Navigator", "d": "Traza la ruta de LATAM a Estados Unidos y Europa."}]}, {"n": "Evangelina Gómez", "r": "Sales Development Representative", "s": "evangelina-gomez", "h": "42bd7bb2a3b6d92dfdb40091", "c": [{"t": "Lead Magician", "d": "Con su magia atrae a cualquier lead."}, {"t": "Call Vampire", "d": "Acecha en las sombras cada vez que alguien necesita un talento."}]}];
+const $=s=>document.querySelector(s);
+const norm=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
+const slug=s=>norm(s).replace(/ /g,"-");
+const imgUrl=(p,i)=>`images/${p.s}-${"ab"[i]}.jpg`;
+
+function web(el,w,h){
+  const rays=7,rings=6,pts=[];let d="";
+  for(let i=0;i<rays;i++){const a=(i/(rays-1))*Math.PI/2;pts.push(a);d+=`M0 0L${Math.cos(a)*w*1.1} ${Math.sin(a)*h*1.3}`;}
+  for(let r=1;r<=rings;r++){const R=r*(Math.max(w,h)/rings)*0.9;
+    for(let i=0;i<rays-1;i++){const a1=pts[i],a2=pts[i+1],am=(a1+a2)/2;
+      d+=`M${(Math.cos(a1)*R).toFixed(1)} ${(Math.sin(a1)*R).toFixed(1)}Q${(Math.cos(am)*R*.8).toFixed(1)} ${(Math.sin(am)*R*.8).toFixed(1)} ${(Math.cos(a2)*R).toFixed(1)} ${(Math.sin(a2)*R).toFixed(1)}`;}}
+  el.innerHTML=`<path d="${d}" fill="none" stroke="currentColor" stroke-width="1.1"/>`;
+}
+web($("#web"),300,220);
+
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,24);}
+
+function show(id){["login","gen","res"].forEach(v=>$("#v-"+v).hidden=v!==id);window.scrollTo({top:0});}
+
+$("#form").addEventListener("submit",async e=>{
+  e.preventDefault();const err=$("#err");err.textContent="";
+  const name=norm($("#name").value),dob=$("#dob").value;
+  if(!name||!dob){err.textContent="Completá tu nombre y tu fecha de nacimiento.";return;}
+  const [y,m,d]=dob.split("-");
+  let h;try{h=await sha(`hcl26|${d}-${m}-${y}`);}catch{err.textContent="Tu navegador no pudo verificar los datos. Probá desde otro navegador.";return;}
+  const tokens=name.split(" ");
+  const p=PEOPLE.find(p=>{if(p.h!==h)return false;const pt=norm(p.n).split(" ");return pt[0]===tokens[0]&&tokens.every(t=>pt.includes(t));});
+  if(!p){err.textContent="No encontramos esa combinación. Revisá cómo escribiste tu nombre y tu fecha de nacimiento.";return;}
+  generate(p);
+});
+
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+
+// "develop" an image out of noise: pixelation + grain that fade with progress
+function drawFrame(cv,img,k,seed){
+  const ctx=cv.getContext("2d"),W=cv.width,H=cv.height;
+  ctx.fillStyle="#0D0F10";ctx.fillRect(0,0,W,H);
+  if(img&&k>0.12){
+    const t=(k-0.12)/0.88,px=Math.max(1,Math.round(56*Math.pow(1-t,2.2)));
+    const sw=Math.max(1,Math.round(W/px)),sh=Math.max(1,Math.round(H/px));
+    const off=drawFrame.off||(drawFrame.off=document.createElement("canvas"));off.width=sw;off.height=sh;
+    const o=off.getContext("2d"),r=Math.max(sw/img.width,sh/img.height),iw=img.width*r,ih=img.height*r;
+    o.drawImage(img,(sw-iw)/2,(sh-ih)/2,iw,ih);
+    ctx.imageSmoothingEnabled=px<3;ctx.globalAlpha=Math.min(1,t*1.6);ctx.drawImage(off,0,0,W,H);ctx.globalAlpha=1;
+  }
+  const g=Math.pow(1-k,1.3);
+  if(g>0.02){
+    const n=drawFrame.noise||(drawFrame.noise=document.createElement("canvas"));n.width=W/4;n.height=H/4;
+    const nc=n.getContext("2d"),id=nc.createImageData(n.width,n.height);
+    for(let i=0;i<id.data.length;i+=4){const v=Math.random()*255;id.data[i]=v*.8;id.data[i+1]=v;id.data[i+2]=v*.6;id.data[i+3]=255*g;}
+    nc.putImageData(id,0,0);ctx.imageSmoothingEnabled=false;ctx.drawImage(n,0,0,W,H);
+  }
+  if(k<1){const y=((k*3+seed)%1)*H;ctx.fillStyle="rgba(204,255,0,.85)";ctx.fillRect(0,y,W,2);ctx.fillStyle="rgba(204,255,0,.12)";ctx.fillRect(0,y-30,W,30);}
+}
+
+async function generate(p){
+  $("#go").disabled=true;
+  const imgs=await Promise.all([0,1].map(i=>loadImg(imgUrl(p,i))));
+  show("gen");
+  const first=p.n.split(" ")[0];
+  $("#gen-title").textContent=`Creando los disfraces de ${first}`;
+  const lines=[
+    "Buscando tu foto en el archivo de Glofy",
+    `Analizando tu puesto: ${p.r}`,
+    "Abriendo el grimorio de disfraces",
+    "Descartando 318 ideas genéricas",
+    "Cosiendo el disfraz sobre tu ropa de oficina",
+    "Revelando dos versiones finales"];
+  const fast=matchMedia("(prefers-reduced-motion: reduce)").matches,total=fast?3000:11000;
+  const log=$("#log");log.innerHTML="";let shown=-1;const t0=performance.now();
+  const cvs=[$("#c0"),$("#c1")];
+  (function tick(now){
+    const k=Math.min(1,(now-t0)/total),idx=Math.min(lines.length-1,Math.floor(k*lines.length));
+    if(idx!==shown){[...log.children].forEach(li=>li.className="done");const li=document.createElement("li");li.className="now";li.textContent=lines[idx]+"…";log.appendChild(li);shown=idx;$("#stage").textContent=lines[idx];}
+    const e=1-Math.pow(1-k,1.6);$("#bar").style.width=(e*100).toFixed(1)+"%";$("#pct").textContent=Math.round(e*100)+"%";
+    const ka=Math.min(1,k/0.8),kb=Math.max(0,Math.min(1,(k-0.15)/0.85));
+    drawFrame(cvs[0],imgs[0],ka,0);drawFrame(cvs[1],imgs[1],kb,.5);
+    if(k<1)requestAnimationFrame(tick);else{[...log.children].forEach(li=>li.className="done");setTimeout(()=>reveal(p,imgs),600);}
+  })(t0);
+}
+
+let downloads=null;
+(async()=>{try{downloads=await window.claude?.use?.("downloads");}catch{downloads=null;}})();
+
+function reveal(p,imgs){
+  show("res");
+  $("#res-name").textContent=p.n;$("#res-role").textContent=p.r;
+  $("#results").innerHTML=p.c.map((c,i)=>`<article class="look">
+    <div class="photo">${imgs[i]?`<img src="${imgUrl(p,i)}" alt="${p.n} disfrazado de ${c.t}">`:`<div class="pending">Imagen en preparación</div>`}</div>
+    <div class="opt">Disfraz ${i+1} de 2</div>
+    <h3></h3><p></p>
+    <div class="row"><button class="dl" type="button" data-i="${i}" ${imgs[i]?"":"disabled"}>Descargar foto</button><span class="toast" aria-live="polite"></span></div>
+  </article>`).join("");
+  document.querySelectorAll(".look").forEach((el,i)=>{el.querySelector("h3").textContent=p.c[i].t;el.querySelector("p").textContent=p.c[i].d;});
+  $("#results").onclick=async e=>{
+    const b=e.target.closest(".dl");if(!b||b.disabled)return;const i=+b.dataset.i,toast=b.nextElementSibling;
+    const fname=`halloween-glofy-${p.s}-${slug(p.c[i].t)}.jpg`;
+    if(!window.claude){const a=document.createElement("a");a.href=imgUrl(p,i);a.download=fname;document.body.appendChild(a);a.click();a.remove();toast.textContent="Descarga iniciada.";return;}
+    const dl=downloads||await window.claude?.use?.("downloads").catch(()=>null);
+    if(!dl){toast.textContent="La descarga no está disponible en esta vista. Mantené presionada la foto para guardarla.";return;}
+    try{b.disabled=true;const blob=await (await fetch(imgUrl(p,i))).blob();
+      await dl.save({filename:fname,data:blob});toast.textContent="Foto guardada.";}
+    catch(err){toast.textContent=err&&err.code==="declined"?"":"No se pudo descargar. Probá de nuevo en unos segundos.";}
+    finally{b.disabled=false;}
+  };
+}
+
+$("#out").addEventListener("click",()=>{$("#form").reset();$("#go").disabled=false;$("#err").textContent="";show("login");});
+</script>
+
+</body>
+</html>
